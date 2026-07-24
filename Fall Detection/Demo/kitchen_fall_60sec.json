@@ -1,0 +1,150 @@
+{
+  "data": {
+    "result": [
+      {
+        "radarUuid": "12E8FE50000400192600000002",
+        "createTime": "20260314200450",
+        "data": "Wy158XzZXgkQbDDG+caV1V/lhEU9Fx2UzBpeLvJShNU=",
+        "dataType": 6,
+        "parsedData": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0
+        ]
+      },
+      {
+        "radarUuid": "12E8FE50000400192600000002",
+        "createTime": "20260314200458",
+        "data": "Xhbi1YpPpZNFu0jnY1JoBFayM0FdpDpSUbBA/6Wa1uw=",
+        "dataType": 6,
+        "parsedData": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0
+        ]
+      },
+      {
+        "radarUuid": "12E8FE50000400192600000002",
+        "createTime": "20260314200500",
+        "data": "Lr+lPWMhXEY+i/NCqqgm7hbjPopwRfCP7NiyNZoIEVY=",
+        "dataType": 6,
+        "parsedData": [
+          0.8594,
+          1.6123,
+          1.160422,
+          0.868244,
+          1.508013,
+          1.176963,
+          24.1226,
+          1
+        ]
+      },
+      {
+        "radarUuid": "12E8FE50000400192600000002",
+        "createTime": "20260314200505",
+        "data": "8mtpgjfBq/0NeqA9iSbAYHjG8LuaStGbrpm8Bz/8YNY=",
+        "dataType": 6,
+        "parsedData": [
+          0.935,
+          1.6673,
+          0.650658,
+          0.833016,
+          1.716116,
+          0.655869,
+          21.152,
+          1
+        ]
+      },
+      {
+        "radarUuid": "12E8FE50000400192600000002",
+        "createTime": "20260314200509",
+        "data": "0O11hOTP+JlNkFVa73H3aqgi+q4LVbFtZcrYckw+l4c=",
+        "dataType": 6,
+        "parsedData": [
+          0.7892,
+          1.7491,
+          0.121954,
+          0.867548,
+          1.769226,
+          0.094404,
+          27.0427,
+          1
+        ]
+      },
+      {
+        "radarUuid": "12E8FE50000400192600000002",
+        "createTime": "20260314200513",
+        "data": "Oafrhy4TP1CRzA6HcbGZ4SuJdEVJhtTyxiFesrH47u0=",
+        "dataType": 6,
+        "parsedData": [
+          0.7939,
+          1.7527,
+          0.110016,
+          0.651407,
+          1.665408,
+          0.149776,
+          24.0823,
+          1
+        ]
+      },
+      {
+        "radarUuid": "12E8FE50000400192600000002",
+        "createTime": "20260314200521",
+        "data": "RpCc6pvNPb3GY72RobrdxDzipTz85LjM6yegYJzm/Iw=",
+        "dataType": 6,
+        "parsedData": [
+          0.7902,
+          1.7443,
+          0.105396,
+          0.891821,
+          1.756722,
+          0.071456,
+          22.6954,
+          1
+        ]
+      },
+      {
+        "radarUuid": "12E8FE50000400192600000002",
+        "createTime": "20260314200532",
+        "data": "vvoHa61vmA2RPIK16q6mPrS6B7V1OcDTeVJnYoM+Nkw=",
+        "dataType": 6,
+        "parsedData": [
+          0.7902,
+          1.7375,
+          0.063379,
+          0.698445,
+          1.821601,
+          0.112748,
+          29.4023,
+          1
+        ]
+      },
+      {
+        "radarUuid": "12E8FE50000400192600000002",
+        "createTime": "20260314200543",
+        "data": "K3teO2p5kNZHIa1qo1MzCDButzL1ubw7owYgeflxIwo=",
+        "dataType": 6,
+        "parsedData": [
+          0.7824,
+          1.7388,
+          0.043204,
+          0.824704,
+          1.678851,
+          0.062722,
+          27.9038,
+          1
+        ]
+      }
+    ]
+  }
+}

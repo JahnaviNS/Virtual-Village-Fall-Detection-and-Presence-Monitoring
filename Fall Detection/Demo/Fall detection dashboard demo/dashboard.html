@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fall Detection — Live Monitor</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #f4f5f7;
+  color: #111;
+  min-height: 100vh;
+}
+
+/* ── top bar ── */
+.topbar {
+  background: #fff;
+  border-bottom: 1px solid #e5e5e5;
+  padding: 0 24px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.topbar-title { font-size: 15px; font-weight: 500; color: #111; }
+.topbar-right { display: flex; align-items: center; gap: 14px; }
+.live-pill {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 500;
+  background: #D1FAE5; color: #065F46;
+  padding: 4px 10px; border-radius: 20px;
+}
+.live-pill.offline { background: #FFE4E1; color: #9F1239; }
+.pulse {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #1D9E75; flex-shrink: 0;
+  animation: pulse 1.5s infinite;
+}
+.offline .pulse { background: #E24B4A; animation: none; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.last-update { font-size: 11px; color: #888; }
+
+/* ── layout ── */
+.page { max-width: 1280px; margin: 0 auto; padding: 20px 24px; }
+
+/* ── metric cards ── */
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0,1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.metric {
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #e8e8e8;
+  padding: 14px 16px;
+}
+.m-label { font-size: 11px; color: #888; margin-bottom: 4px; }
+.m-value { font-size: 26px; font-weight: 500; line-height: 1; margin-bottom: 3px; }
+.m-sub   { font-size: 11px; color: #aaa; }
+
+/* ── main grid ── */
+.main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+/* ── cards ── */
+.card {
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #e8e8e8;
+  padding: 14px 16px;
+}
+.card-title { font-size: 11px; color: #888; margin-bottom: 12px; }
+.chart-wrap { position: relative; width: 100%; height: 220px; }
+
+/* room selector */
+.room-tabs {
+  display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;
+}
+.room-tab {
+  font-size: 11px; font-weight: 500;
+  padding: 4px 10px; border-radius: 6px;
+  border: 1px solid #e5e5e5;
+  background: #f5f5f5; color: #555;
+  cursor: pointer; transition: all .12s;
+}
+.room-tab:hover { background: #ebebeb; }
+.room-tab.active { background: #111; color: #fff; border-color: #111; }
+.room-tab.fall   { background: #FFE4E1; color: #9F1239; border-color: #F5C4BC; }
+.room-tab.low    { background: #FEF3C7; color: #92400E; border-color: #F5D9A0; }
+
+/* ── room status grid ── */
+.room-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 8px;
+}
+.room-card {
+  border-radius: 8px; border: 1px solid #e8e8e8;
+  padding: 10px 12px;
+  display: flex; align-items: center; gap: 10px;
+  transition: border-color .15s;
+}
+.room-card.fall   { background: #FFF5F5; border-color: #F5C4BC; }
+.room-card.low    { background: #FFFBF0; border-color: #F5D9A0; }
+.room-card.normal { background: #F9FFF9; border-color: #A8DFC8; }
+.room-card.offline{ background: #F5F5F5; border-color: #ddd; }
+.room-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.room-info { flex: 1; min-width: 0; }
+.room-name { font-size: 12px; font-weight: 500; color: #111; }
+.room-z1   { font-size: 11px; color: #888; margin-top: 1px; }
+.room-badge {
+  font-size: 10px; font-weight: 500;
+  padding: 2px 8px; border-radius: 20px;
+  flex-shrink: 0;
+}
+.badge-fall   { background: #FFE4E1; color: #9F1239; }
+.badge-low    { background: #FEF3C7; color: #92400E; }
+.badge-normal { background: #D1FAE5; color: #065F46; }
+.badge-offline{ background: #e5e5e5; color: #888; }
+
+/* ── alert log ── */
+.alert-list { display: flex; flex-direction: column; gap: 0; }
+.alert-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+.alert-item:last-child { border-bottom: none; }
+.alert-icon {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; font-size: 13px;
+}
+.alert-body { flex: 1; min-width: 0; }
+.alert-title { font-size: 12px; font-weight: 500; color: #111; }
+.alert-meta  { font-size: 11px; color: #888; margin-top: 2px; line-height: 1.4; }
+.alert-badge { flex-shrink: 0; font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 20px; }
+
+.empty-state { text-align: center; padding: 24px 0; font-size: 12px; color: #aaa; }
+
+/* ── prob bar ── */
+.prob-bar-bg   { background: #eee; border-radius: 3px; height: 4px; margin-top: 4px; overflow:hidden; }
+.prob-bar-fill { height: 100%; border-radius: 3px; transition: width .3s; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-title">Fall detection — live monitor</div>
+  <div class="topbar-right">
+    <span class="last-update" id="lastUpdate">Connecting…</span>
+    <div class="live-pill offline" id="livePill">
+      <div class="pulse"></div>
+      <span id="liveLabel">Offline</span>
+    </div>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- metric row -->
+  <div class="metrics">
+    <div class="metric">
+      <div class="m-label">Active sensors</div>
+      <div class="m-value" id="mSensors">—</div>
+      <div class="m-sub" id="mSensorsSub">—</div>
+    </div>
+    <div class="metric">
+      <div class="m-label">Falls today</div>
+      <div class="m-value" id="mFalls" style="color:#E24B4A;">—</div>
+      <div class="m-sub" id="mFallsSub">—</div>
+    </div>
+    <div class="metric">
+      <div class="m-label">False alerts</div>
+      <div class="m-value" id="mFalse" style="color:#D97706;">—</div>
+      <div class="m-sub">Last 24 hours</div>
+    </div>
+    <div class="metric">
+      <div class="m-label">Model threshold</div>
+      <div class="m-value" style="color:#1D9E75;">0.35</div>
+      <div class="m-sub" id="mModel">XGBoost</div>
+    </div>
+  </div>
+
+  <!-- main grid: live chart + room status -->
+  <div class="main-grid">
+
+    <div class="card">
+      <div class="card-title">Live z1 height feed — last 60 frames</div>
+      <div class="room-tabs" id="roomTabs"></div>
+      <div class="chart-wrap">
+        <canvas id="liveChart" role="img" aria-label="Live z1 height feed per room"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Room status</div>
+      <div class="room-grid" id="roomGrid"></div>
+    </div>
+
+  </div>
+
+  <!-- alert log -->
+  <div class="card">
+    <div class="card-title">Alert log</div>
+    <div class="alert-list" id="alertList">
+      <div class="empty-state">No alerts yet — waiting for data…</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API = 'http://localhost:8000';
+const ROOMS = ['Bedroom','Kitchen','Living Room','Office','Sunroom','Hallway'];
+
+let activeRoom = 'Kitchen';
+let roomData   = {};  // room -> {z1, fall_prob, status, history:[]}
+let chart      = null;
+
+/* ── chart init ──────────────────────────────────────────────────────────── */
+function initChart() {
+  const ctx = document.getElementById('liveChart');
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [
+        {
+          label: 'z1 height',
+          data: [],
+          borderColor: '#378ADD',
+          borderWidth: 1.8,
+          pointRadius: 0,
+          tension: 0.3,
+          fill: false,
+        },
+        {
+          label: 'Fall',
+          data: [],
+          type: 'scatter',
+          pointRadius: 7,
+          pointBackgroundColor: '#E24B4A',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          showLine: false,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 200 },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` z1: ${ctx.parsed.y.toFixed(3)}m`
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#888', font: { size: 10 }, maxTicksLimit: 8 },
+          grid:  { color: 'rgba(0,0,0,0.05)' }
+        },
+        y: {
+          min: 0, max: 2.2,
+          title: { display: true, text: 'z1 (m)', color: '#888', font: { size: 10 } },
+          ticks: { color: '#888', font: { size: 10 } },
+          grid:  { color: 'rgba(0,0,0,0.05)' }
+        }
+      }
+    },
+    plugins: [{
+      id: 'refline',
+      afterDraw(chart) {
+        const { ctx, chartArea: { left, right }, scales: { y } } = chart;
+        const py = y.getPixelForValue(0.4);
+        ctx.save();
+        ctx.strokeStyle = 'rgba(55,138,221,0.3)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath(); ctx.moveTo(left, py); ctx.lineTo(right, py); ctx.stroke();
+        ctx.font = '10px sans-serif';
+        ctx.fillStyle = 'rgba(55,138,221,0.6)';
+        ctx.fillText('0.4m fall threshold', left + 6, py - 4);
+        ctx.restore();
+      }
+    }]
+  });
+}
+
+function updateChart() {
+  const d = roomData[activeRoom];
+  if (!d || !d.history || !chart) return;
+
+  const hist  = d.history;
+  const labels = hist.map((h, i) => i - hist.length + 1);
+  const vals   = hist.map(h => h.z1);
+  const falls  = hist.map((h, i) => {
+    const prob = d.fall_probability || 0;
+    const isLast = i === hist.length - 1;
+    return (isLast && prob >= 0.35) ? h.z1 : null;
+  });
+
+  chart.data.labels            = labels;
+  chart.data.datasets[0].data  = vals;
+  chart.data.datasets[1].data  = falls;
+  chart.update('none');
+}
+
+/* ── room tabs ───────────────────────────────────────────────────────────── */
+function buildRoomTabs() {
+  const wrap = document.getElementById('roomTabs');
+  wrap.innerHTML = '';
+  ROOMS.forEach(room => {
+    const btn = document.createElement('button');
+    btn.className = 'room-tab' + (room === activeRoom ? ' active' : '');
+    btn.textContent = room;
+
+    const d = roomData[room];
+    if (d && d.status === 'fall')   btn.classList.add('fall');
+    if (d && d.status === 'low')    btn.classList.add('low');
+
+    btn.onclick = () => { activeRoom = room; buildRoomTabs(); updateChart(); };
+    wrap.appendChild(btn);
+  });
+}
+
+/* ── room grid ───────────────────────────────────────────────────────────── */
+function buildRoomGrid() {
+  const grid = document.getElementById('roomGrid');
+  grid.innerHTML = '';
+  ROOMS.forEach(room => {
+    const d   = roomData[room] || {};
+    const st  = d.status || 'offline';
+    const z1  = d.z1 != null ? d.z1.toFixed(3) + 'm' : '—';
+    const prob = d.fall_probability != null ? (d.fall_probability * 100).toFixed(0) + '%' : '—';
+    const dotColor = st === 'fall' ? '#E24B4A' : st === 'low' ? '#D97706' : st === 'normal' ? '#1D9E75' : '#ccc';
+
+    const badgeCls  = st === 'fall' ? 'badge-fall' : st === 'low' ? 'badge-low' : st === 'normal' ? 'badge-normal' : 'badge-offline';
+    const badgeTxt  = st === 'fall' ? 'Fall' : st === 'low' ? 'Low z1' : st === 'normal' ? 'Normal' : 'Offline';
+
+    const div = document.createElement('div');
+    div.className = `room-card ${st}`;
+    div.innerHTML = `
+      <div class="room-dot" style="background:${dotColor};"></div>
+      <div class="room-info">
+        <div class="room-name">${room}</div>
+        <div class="room-z1">z1: ${z1} · p: ${prob}</div>
+        <div class="prob-bar-bg"><div class="prob-bar-fill" style="width:${(d.fall_probability||0)*100}%;background:${dotColor};"></div></div>
+      </div>
+      <div class="room-badge ${badgeCls}">${badgeTxt}</div>
+    `;
+    grid.appendChild(div);
+  });
+}
+
+/* ── alert log ───────────────────────────────────────────────────────────── */
+function buildAlertLog(alerts) {
+  const list = document.getElementById('alertList');
+  if (!alerts || alerts.length === 0) {
+    list.innerHTML = '<div class="empty-state">No alerts today</div>';
+    return;
+  }
+  list.innerHTML = alerts.map(a => {
+    const confirmed = a.confirmed;
+    const iconBg    = confirmed ? '#FFE4E1' : '#FEF3C7';
+    const iconSvg   = confirmed
+      ? `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2L1.5 11.5h11L7 2z" stroke="#9F1239" stroke-width="1.3" stroke-linejoin="round"/><line x1="7" y1="6" x2="7" y2="9" stroke="#9F1239" stroke-width="1.3" stroke-linecap="round"/><circle cx="7" cy="10.5" r="0.6" fill="#9F1239"/></svg>`
+      : `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="#92400E" stroke-width="1.3"/><line x1="7" y1="4.5" x2="7" y2="7.5" stroke="#92400E" stroke-width="1.3" stroke-linecap="round"/><circle cx="7" cy="9.5" r="0.6" fill="#92400E"/></svg>`;
+    const badgeCls  = confirmed ? 'badge-fall' : 'badge-low';
+    const badgeTxt  = confirmed ? 'Confirmed' : 'False positive';
+
+    return `
+      <div class="alert-item">
+        <div class="alert-icon" style="background:${iconBg};">${iconSvg}</div>
+        <div class="alert-body">
+          <div class="alert-title">${confirmed ? 'Fall detected' : 'False alert'} — ${a.room}</div>
+          <div class="alert-meta">${a.time} · z1=${a.z1}m · prob=${a.prob} · threshold=0.35</div>
+        </div>
+        <div class="alert-badge ${badgeCls}">${badgeTxt}</div>
+      </div>`;
+  }).join('');
+}
+
+/* ── metric cards ────────────────────────────────────────────────────────── */
+function updateMetrics(state) {
+  const online = ROOMS.filter(r => roomData[r] && roomData[r].status !== 'offline').length;
+  document.getElementById('mSensors').textContent    = `${online} / ${ROOMS.length}`;
+  document.getElementById('mSensorsSub').textContent = online === ROOMS.length ? 'All rooms online' : `${ROOMS.length - online} offline`;
+  document.getElementById('mFalls').textContent      = state.falls_today ?? '—';
+  document.getElementById('mFalse').textContent      = state.false_alerts ?? '—';
+  document.getElementById('mModel').textContent      = state.model_loaded ? 'XGBoost · loaded' : 'Model not loaded';
+
+  const latestFall = (state.alerts || []).find(a => a.confirmed);
+  document.getElementById('mFallsSub').textContent = latestFall
+    ? `${latestFall.room} · ${latestFall.time}`
+    : 'None detected today';
+}
+
+/* ── SSE connection ──────────────────────────────────────────────────────── */
+function connect() {
+  const pill  = document.getElementById('livePill');
+  const label = document.getElementById('liveLabel');
+  const ts    = document.getElementById('lastUpdate');
+
+  const es = new EventSource(`${API}/stream`);
+
+  es.onopen = () => {
+    pill.classList.remove('offline');
+    label.textContent = 'Live';
+  };
+
+  es.onmessage = (e) => {
+    const state = JSON.parse(e.data);
+
+    // update room data
+    for (const [room, d] of Object.entries(state.rooms || {})) {
+      roomData[room] = d;
+    }
+
+    updateMetrics(state);
+    buildRoomTabs();
+    buildRoomGrid();
+    buildAlertLog(state.alerts || []);
+    updateChart();
+
+    ts.textContent = 'Updated ' + new Date().toLocaleTimeString();
+  };
+
+  es.onerror = () => {
+    pill.classList.add('offline');
+    label.textContent = 'Offline';
+    ts.textContent = 'Connection lost — retrying…';
+  };
+}
+
+/* ── demo mode (no backend) ─────────────────────────────────────────────── */
+function demoMode() {
+  console.warn('Backend not reachable — running demo data');
+  document.getElementById('liveLabel').textContent = 'Demo';
+  document.getElementById('livePill').classList.remove('offline');
+
+  const rng = (() => { let s=42; return () => { s=Math.sin(s)*99999; return s-Math.floor(s); }; })();
+  const hist = (n, isFall) => Array.from({length:n}, (_,i) => ({
+    t: new Date(Date.now() - (n-i)*10000).toISOString(),
+    z1: isFall && i > n-8 ? +(0.18+rng()*0.06).toFixed(3) : +(0.85+rng()*0.25).toFixed(3)
+  }));
+
+  const demoState = {
+    falls_today: 1, false_alerts: 2, model_loaded: true,
+    alerts: [
+      { room:'Kitchen', time:'20:05:13', z1:0.22, prob:0.997, confirmed:true },
+      { room:'Office',  time:'14:32:07', z1:0.38, prob:0.37,  confirmed:false },
+    ],
+    rooms: {
+      Kitchen:     { z1:0.22, fall_prob:0.997, status:'fall',   history: hist(60,true)  },
+      Bedroom:     { z1:0.87, fall_prob:0.02,  status:'normal', history: hist(60,false) },
+      'Living Room':{ z1:1.12, fall_prob:0.01, status:'normal', history: hist(60,false) },
+      Office:      { z1:0.38, fall_prob:0.37,  status:'low',    history: hist(60,false) },
+      Sunroom:     { z1:1.05, fall_prob:0.03,  status:'normal', history: hist(60,false) },
+      Hallway:     { z1:1.34, fall_prob:0.01,  status:'normal', history: hist(60,false) },
+    }
+  };
+
+  for (const [room, d] of Object.entries(demoState.rooms)) roomData[room] = d;
+  updateMetrics(demoState);
+  buildRoomTabs();
+  buildRoomGrid();
+  buildAlertLog(demoState.alerts);
+  updateChart();
+
+  document.getElementById('lastUpdate').textContent = 'Demo mode — no backend';
+}
+
+/* ── boot ────────────────────────────────────────────────────────────────── */
+initChart();
+buildRoomTabs();
+
+// Try real backend first, fall back to demo after 2s
+fetch(`${API}/health`, { signal: AbortSignal.timeout(2000) })
+  .then(r => r.ok ? connect() : demoMode())
+  .catch(() => demoMode());
+</script>
+</body>
+</html>
